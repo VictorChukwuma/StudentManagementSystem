@@ -15,5 +15,7 @@ namespace StudentManagementSystem.Services
 
                                             Task<Student?> GetStudentByIdAsync(int id);
                                             Task DeleteStudentAsync(Student student);
+
+                                            Task<IEnumerable<Student>> GetAllStudentsAsync();
                                                 }
                                                 }

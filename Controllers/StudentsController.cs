@@ -8,83 +8,96 @@ using System.Text;
 namespace StudentManagementSystem.Controllers
 {
     [ApiController]
-        [Route("api/students")]
-            [Authorize] // Protect all endpoints by default
-                public class StudentsController : ControllerBase
-                    {
-                            private readonly IStudentService _studentService;
-                                    private readonly AuthService _authService;
+    [Route("api/students")]
+    [Authorize]
+    public class StudentsController : ControllerBase
+    {
+        private readonly IStudentService _studentService;
+        private readonly AuthService _authService;
 
-                                            public StudentsController(IStudentService studentService, AuthService authService)
-                                                    {
-                                                                _studentService = studentService;
-                                                                            _authService = authService;
-                                                                                    }
+        public StudentsController(IStudentService studentService, AuthService authService)
+        {
+            _studentService = studentService;
+            _authService = authService;
+        }
 
-                                                                                            // ============================
-                                                                                                    // ✅ REGISTER STUDENT
-                                                                                                            // ============================
-                                                                                                                    [AllowAnonymous]
-                                                                                                                            [HttpPost("register")]
-                                                                                                                                    public async Task<IActionResult> Register(RegisterStudentDto dto)
-                                                                                                                                            {
-                                                                                                                                                        var student = await _studentService.RegisterStudentAsync(dto);
+        // ============================
+        // ✅ REGISTER STUDENT
+        // ============================
+        [AllowAnonymous]
+        [HttpPost("register")]
+        public async Task<IActionResult> Register(RegisterStudentDto dto)
+        {
+            var student = await _studentService.RegisterStudentAsync(dto);
 
-                                                                                                                                                                    return Ok(new
-                                                                                                                                                                                {
-                                                                                                                                                                                                student.Id,
-                                                                                                                                                                                                                student.FullName,
-                                                                                                                                                                                                                                student.Email,
-                                                                                                                                                                                                                                                student.CreatedAt
-                                                                                                                                                                                                                                                            });
-                                                                                                                                                                                                                                                                    }
+            return Ok(new
+            {
+                student.Id,
+                student.FullName,
+                student.Email,
+                student.CreatedAt
+            });
+        }
 
-                                                                                                                                                                                                                                                                            // ============================
-                                                                                                                                                                                                                                                                                    // 🔑 LOGIN STUDENT
-                                                                                                                                                                                                                                                                                            // ============================
-                                                                                                                                                                                                                                                                                                    [AllowAnonymous]
-                                                                                                                                                                                                                                                                                                            [HttpPost("login")]
-                                                                                                                                                                                                                                                                                                                    public async Task<IActionResult> Login(LoginStudentDto dto)
-                                                                                                                                                                                                                                                                                                                            {
-                                                                                                                                                                                                                                                                                                                                        var student = await _studentService.GetStudentByEmailAsync(dto.Email);
+        // ============================
+        // 🔑 LOGIN STUDENT
+        // ============================
+        [AllowAnonymous]
+        [HttpPost("login")]
+        public async Task<IActionResult> Login(LoginStudentDto dto)
+        {
+            var student = await _studentService.GetStudentByEmailAsync(dto.Email);
 
-                                                                                                                                                                                                                                                                                                                                                    if (student == null || !VerifyPassword(dto.Password, student.PasswordHash))
-                                                                                                                                                                                                                                                                                                                                                                    return Unauthorized("Invalid credentials");
+            if (student == null || !VerifyPassword(dto.Password, student.PasswordHash))
+                return Unauthorized("Invalid credentials");
 
-                                                                                                                                                                                                                                                                                                                                                                                var token = _authService.GenerateJwtToken(student);
+            var token = _authService.GenerateJwtToken(student);
 
-                                                                                                                                                                                                                                                                                                                                                                                            return Ok(new { token });
-                                                                                                                                                                                                                                                                                                                                                                                                    }
+            return Ok(new { token });
+        }
 
-                                                                                                                                                                                                                                                                                                                                                                                                            // ============================
-                                                                                                                                                                                                                                                                                                                                                                                                                    // 🔐 PASSWORD VERIFICATION
-                                                                                                                                                                                                                                                                                                                                                                                                                            // ============================
-                                                                                                                                                                                                                                                                                                                                                                                                                                    private bool VerifyPassword(string input, string hash)
-                                                                                                                                                                                                                                                                                                                                                                                                                                            {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                        if (string.IsNullOrEmpty(input) || string.IsNullOrEmpty(hash))
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                        return false;
+        // ============================
+        // 📄 GET ALL STUDENTS
+        // ============================
+        [AllowAnonymous]
+        [HttpGet]
+        public async Task<IActionResult> GetAllStudents()
+        {
+            var students = await _studentService.GetAllStudentsAsync();
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    using var sha256 = SHA256.Create();
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            var computedHash = Convert.ToBase64String(bytes);
+            return Ok(students);
+        }
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        return computedHash == hash;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                }
+        // ============================
+        // 🔐 PASSWORD VERIFICATION
+        // ============================
+        private bool VerifyPassword(string input, string hash)
+        {
+            if (string.IsNullOrEmpty(input) || string.IsNullOrEmpty(hash))
+                return false;
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        // ============================
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                // 🗑 DELETE STUDENT
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        // ============================
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                [HttpDelete("{id}")]
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        public async Task<IActionResult> Delete(int id)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            var student = await _studentService.GetStudentByIdAsync(id);
+            using var sha256 = SHA256.Create();
+            var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
+            var computedHash = Convert.ToBase64String(bytes);
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        if (student == null)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        return NotFound("Student not found");
+            return computedHash == hash;
+        }
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    await _studentService.DeleteStudentAsync(student);
+        // ============================
+        // 🗑 DELETE STUDENT
+        // ============================
+        
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var student = await _studentService.GetStudentByIdAsync(id);
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                return Ok("Student deleted successfully");
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            }
+            if (student == null)
+                return NotFound("Student not found");
+
+            await _studentService.DeleteStudentAsync(student);
+
+            return Ok("Student deleted successfully");
+        }
+    }
+}
